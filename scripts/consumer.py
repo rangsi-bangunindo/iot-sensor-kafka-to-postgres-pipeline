@@ -1,7 +1,7 @@
 import json
 import logging
 import psycopg2
-from kafka import KafkaConsumer
+from kafka import KafkaConsumer, KafkaProducer
 from dotenv import load_dotenv
 import os
 
@@ -15,6 +15,7 @@ logging.basicConfig(level=logging.INFO, format='[%(asctime)s] %(levelname)s - %(
 KAFKA_BOOTSTRAP_SERVERS = os.getenv("KAFKA_BOOTSTRAP_SERVERS")
 KAFKA_CONSUMER_GROUP = os.getenv("KAFKA_CONSUMER_GROUP")
 KAFKA_TOPIC = os.getenv("KAFKA_TOPIC")
+KAFKA_DEAD_LETTER_TOPIC = os.getenv("KAFKA_DEAD_LETTER_TOPIC")
 
 # PostgreSQL configuration
 POSTGRES_HOST = os.getenv("POSTGRES_HOST")
@@ -24,8 +25,8 @@ POSTGRES_USER = os.getenv("POSTGRES_USER")
 POSTGRES_PASSWORD = os.getenv("POSTGRES_PASSWORD")
 
 # Table names
-METADATA_TABLE = os.getenv("METADATA_TABLE", "rangsi_device_metadata")
-TARGET_TABLE = os.getenv("TARGET_TABLE", "rangsi_sensor_data")
+METADATA_TABLE = os.getenv("METADATA_TABLE")
+TARGET_TABLE = os.getenv("TARGET_TABLE")
 
 # Connect to PostgreSQL
 def get_pg_connection():
@@ -40,9 +41,34 @@ def get_pg_connection():
 # Fetch metadata and cache in memory (assumes small table)
 def load_device_metadata(conn):
     with conn.cursor() as cur:
-        cur.execute(f"SELECT device_id, location, device_type FROM {METADATA_TABLE}")
-        metadata = {row[0]: {"location": row[1], "device_type": row[2]} for row in cur.fetchall()}
+        cur.execute(f"SELECT device_id, device_name, location, manufacturer FROM {METADATA_TABLE}")
+        metadata = {
+            row[0]: {
+                "device_name": row[1],
+                "location": row[2],
+                "manufacturer": row[3]
+            }
+            for row in cur.fetchall()
+        }
     return metadata
+
+# Enrich sensor data using device metadata
+def enrich_sensor_data(sensor_data, metadata_dict):
+    device_id = sensor_data.get("device_id")
+    enrichment = metadata_dict.get(device_id)
+
+    if enrichment is None:
+        enrichment = {
+            "device_name": "Perangkat Tidak Dikenal",
+            "location": "Lokasi Tidak Diketahui",
+            "manufacturer": "Tidak Diketahui"
+        }
+
+    enriched_data = {
+        **sensor_data,
+        **enrichment
+    }
+    return enriched_data
 
 # Save enriched sensor data
 def insert_sensor_data(conn, record):
@@ -50,17 +76,18 @@ def insert_sensor_data(conn, record):
         cur.execute(
             f"""
             INSERT INTO {TARGET_TABLE} (
-                device_id, temperature, humidity, timestamp,
-                location, device_type
-            ) VALUES (%s, %s, %s, %s, %s, %s)
+                device_id, device_name, temperature, humidity,
+                timestamp, location, manufacturer
+            ) VALUES (%s, %s, %s, %s, %s, %s, %s)
             """,
             (
                 record["device_id"],
+                record["device_name"],
                 record["temperature"],
                 record["humidity"],
                 record["timestamp"],
-                record.get("location"),
-                record.get("device_type")
+                record["location"],
+                record["manufacturer"]
             )
         )
     conn.commit()
@@ -71,10 +98,10 @@ def consume_and_process():
         bootstrap_servers=KAFKA_BOOTSTRAP_SERVERS,
         group_id=KAFKA_CONSUMER_GROUP,
         value_deserializer=lambda m: json.loads(m.decode("utf-8")),
-        auto_offset_reset='earliest'
+        auto_offset_reset='earliest',
+        enable_auto_commit=False
     )
 
-    dead_letter_topic = os.getenv("KAFKA_DEAD_LETTER_TOPIC", "iot-dead-letter")
     dead_letter_producer = KafkaProducer(
         bootstrap_servers=KAFKA_BOOTSTRAP_SERVERS,
         value_serializer=lambda m: json.dumps(m).encode("utf-8")
@@ -94,30 +121,31 @@ def consume_and_process():
             success = False
             for attempt in range(1, MAX_RETRIES + 1):
                 try:
-                    device_info = device_metadata.get(data["device_id"], {})
-                    data.update(device_info)
+                    data = enrich_sensor_data(data, device_metadata)
 
                     insert_sensor_data(pg_conn, data)
                     consumer.commit()
                     logging.info(f"Inserted and committed for device {data['device_id']}")
                     success = True
-                    break  # Exit retry loop if successful
+                    break
 
                 except Exception as e:
                     logging.warning(f"Attempt {attempt} failed: {e}")
                     if attempt < MAX_RETRIES:
-                        continue  # Retry
+                        continue
                     else:
-                        # Final failure after max retries
-                        logging.error(f"Max retries exceeded. Sending to dead-letter topic: {data}")
+                        logging.error("Max retries exceeded. Sending to dead-letter topic.")
                         try:
-                            dead_letter_producer.send(dead_letter_topic, value=data)
-                            dead_letter_producer.flush()
+                            if KAFKA_DEAD_LETTER_TOPIC:
+                                dead_letter_producer.send(KAFKA_DEAD_LETTER_TOPIC, value=data)
+                                dead_letter_producer.flush()
+                                logging.info("Sent to dead-letter topic.")
+                            else:
+                                logging.critical("Dead-letter topic not set. Message dropped.")
                         except Exception as dlq_error:
                             logging.critical(f"Failed to send to dead-letter topic: {dlq_error}")
 
             if not success:
-                # Track in external monitoring or raise alert
                 logging.error(f"Data permanently failed: {data}")
 
     except Exception as e:
