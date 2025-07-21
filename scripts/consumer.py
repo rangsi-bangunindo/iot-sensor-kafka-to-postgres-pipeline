@@ -69,10 +69,18 @@ def consume_and_process():
     consumer = KafkaConsumer(
         KAFKA_TOPIC,
         bootstrap_servers=KAFKA_BOOTSTRAP_SERVERS,
-        auto_offset_reset='earliest',
-        enable_auto_commit=True,
-        value_deserializer=lambda m: json.loads(m.decode('utf-8'))
+        group_id=KAFKA_CONSUMER_GROUP,
+        value_deserializer=lambda m: json.loads(m.decode("utf-8")),
+        auto_offset_reset='earliest'
     )
+
+    dead_letter_topic = os.getenv("KAFKA_DEAD_LETTER_TOPIC", "iot-dead-letter")
+    dead_letter_producer = KafkaProducer(
+        bootstrap_servers=KAFKA_BOOTSTRAP_SERVERS,
+        value_serializer=lambda m: json.dumps(m).encode("utf-8")
+    )
+
+    MAX_RETRIES = 3
 
     try:
         pg_conn = get_pg_connection()
@@ -82,17 +90,41 @@ def consume_and_process():
         for message in consumer:
             data = message.value
             logging.info(f"Consumed: {data}")
-            
-            device_info = device_metadata.get(data["device_id"], {})
-            data.update(device_info)
 
-            insert_sensor_data(pg_conn, data)
-            logging.info(f"Inserted enriched data for {data['device_id']}")
+            success = False
+            for attempt in range(1, MAX_RETRIES + 1):
+                try:
+                    device_info = device_metadata.get(data["device_id"], {})
+                    data.update(device_info)
+
+                    insert_sensor_data(pg_conn, data)
+                    consumer.commit()
+                    logging.info(f"Inserted and committed for device {data['device_id']}")
+                    success = True
+                    break  # Exit retry loop if successful
+
+                except Exception as e:
+                    logging.warning(f"Attempt {attempt} failed: {e}")
+                    if attempt < MAX_RETRIES:
+                        continue  # Retry
+                    else:
+                        # Final failure after max retries
+                        logging.error(f"Max retries exceeded. Sending to dead-letter topic: {data}")
+                        try:
+                            dead_letter_producer.send(dead_letter_topic, value=data)
+                            dead_letter_producer.flush()
+                        except Exception as dlq_error:
+                            logging.critical(f"Failed to send to dead-letter topic: {dlq_error}")
+
+            if not success:
+                # Track in external monitoring or raise alert
+                logging.error(f"Data permanently failed: {data}")
 
     except Exception as e:
-        logging.error(f"Error in consumer: {e}")
+        logging.error(f"Fatal error in consumer: {e}")
     finally:
         consumer.close()
+        dead_letter_producer.close()
         if 'pg_conn' in locals():
             pg_conn.close()
 
