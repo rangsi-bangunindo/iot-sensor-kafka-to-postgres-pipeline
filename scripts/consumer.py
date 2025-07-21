@@ -3,6 +3,7 @@ import logging
 import psycopg2
 from kafka import KafkaConsumer, KafkaProducer
 from dotenv import load_dotenv
+from kafka_client import get_kafka_consumer
 import os
 
 # Load environment variables
@@ -93,13 +94,10 @@ def insert_sensor_data(conn, record):
     conn.commit()
 
 def consume_and_process():
-    consumer = KafkaConsumer(
-        KAFKA_TOPIC,
+    consumer = get_kafka_consumer(
+        topic=KAFKA_TOPIC,
         bootstrap_servers=KAFKA_BOOTSTRAP_SERVERS,
-        group_id=KAFKA_CONSUMER_GROUP,
-        value_deserializer=lambda m: json.loads(m.decode("utf-8")),
-        auto_offset_reset='earliest',
-        enable_auto_commit=False
+        group_id=KAFKA_CONSUMER_GROUP
     )
 
     dead_letter_producer = KafkaProducer(

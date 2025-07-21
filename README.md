@@ -2,6 +2,8 @@ Project Structure
 
 ```text
 iot-sensor-kafka-to-postgres-pipeline/
+├── kafka_client/
+│   └── __init__.py              # Retry-wrapped KafkaConsumer instantiation
 ├── scripts/
 │   ├── producer.py              # Kafka Producer: sends IoT sensor data
 │   └── consumer.py              # Kafka Consumer: enriches and writes to PostgreSQL
