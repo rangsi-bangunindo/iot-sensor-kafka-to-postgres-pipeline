@@ -18,6 +18,10 @@ A Python-based data pipeline that simulates IoT sensor data, streams it through 
 iot-sensor-kafka-to-postgres-pipeline/
 ├── kafka_client/
 │   └── __init__.py              # KafkaConsumer with retry logic
+├── postgres_client/
+│   ├── __init__.py              # Exposes get_pg_connection, load_device_metadata, insert_sensor_data
+│   ├── connection.py            # DB connection logic
+│   └── io.py                    # Read/write ops
 ├── scripts/
 │   ├── __init__.py              # Optional package marker
 │   ├── producer.py              # Sends sensor data to Kafka

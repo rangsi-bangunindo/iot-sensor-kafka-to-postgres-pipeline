@@ -4,7 +4,7 @@ import psycopg2
 from kafka import KafkaProducer
 from dotenv import load_dotenv
 from kafka_client import get_kafka_consumer
-from utils.postgres_client import get_pg_connection, load_device_metadata, insert_sensor_data
+from postgres_client import get_pg_connection, load_device_metadata, insert_sensor_data
 import os
 
 # Load environment variables
