@@ -20,24 +20,31 @@ A Python-based data pipeline that simulates IoT sensor data, streams it through 
 
 ```text
 iot-sensor-kafka-to-postgres-pipeline/
-├── postgres_client/
-│   ├── __init__.py              # Exposes get_pg_connection, load_device_metadata, insert_sensor_data
-│   ├── connection.py            # DB connection logic
-│   └── io.py                    # Read/write ops
-├── kafka_client/
-│   └── __init__.py              # KafkaConsumer with retry logic
-├── scripts/
-│   ├── __init__.py              # Optional package marker
-│   ├── producer.py              # Sends sensor data to Kafka
-│   └── consumer.py              # Reads, enriches, inserts to DB
-├── db/
-│   └── schema.sql               # Table definitions
-├── .env                         # Local config (excluded from Git)
-├── .env.example                 # Template for environment variables
-├── requirements.txt             # Python dependencies
-├── docker-compose.yml           # Placeholder for future use
-├── .gitignore                   # Ignore rules
-└── README.md                    # Project documentation
+├── kafka_client/               # Kafka-specific logic & handlers
+│   ├── __init__.py
+│   ├── connection.py
+│   └── consumer.py             # Core consumer logic (used by entry point)
+├── postgres_client/            # All DB-related logic
+│   ├── __init__.py
+│   ├── connection.py           # Database connection logic
+│   └── io.py                   # Read/write functions (load metadata, insert records)
+├── scripts/                    # Entry points (CLI / main execution)
+│   ├── __init__.py
+│   ├── consumer.py             # Runs Kafka consumer using kafka_client.processor
+│   └── producer.py             # Optional: sends simulated sensor data
+├── utils/                      # Shared helper modules
+│   ├── __init__.py
+│   └── enrichment.py           # Sensor enrichment logic
+├── config/                     # Configuration handling
+│   └── config.py               # Loads env vars from .env
+├── db/                         # SQL schemas or migration scripts
+│   └── schema.sql
+├── docker-compose.yml          # Placeholder for future use
+├── requirements.txt
+├── .env
+├── .env.example
+├── .gitignore
+└── README.md
 ```
 
 ---

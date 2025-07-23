@@ -1,16 +1,10 @@
-import os
-
-# Table names from environment
-METADATA_TABLE = os.getenv("METADATA_TABLE")
-TARGET_TABLE = os.getenv("TARGET_TABLE")
-
-# Fetch metadata and cache in memory (assumes small table)
-def load_device_metadata(conn):
+def load_device_metadata(conn, config):
+    table = config["METADATA_TABLE"]
     with conn.cursor() as cur:
         cur.execute(
             f"""
             SELECT device_id, device_name, location, manufacturer
-            FROM {METADATA_TABLE}
+            FROM {table}
             """
         )
         return {
@@ -22,12 +16,12 @@ def load_device_metadata(conn):
             for row in cur.fetchall()
         }
 
-# Save enriched sensor data
-def insert_sensor_data(conn, record):
+def insert_sensor_data(conn, record, config):
+    table = config["TARGET_TABLE"]
     with conn.cursor() as cur:
         cur.execute(
             f"""
-            INSERT INTO {TARGET_TABLE} (
+            INSERT INTO {table} (
                 device_id, device_name, temperature, humidity,
                 timestamp, location, manufacturer
             ) VALUES (%s, %s, %s, %s, %s, %s, %s)
