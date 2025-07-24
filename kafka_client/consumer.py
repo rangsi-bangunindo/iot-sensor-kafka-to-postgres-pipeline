@@ -1,7 +1,7 @@
 import json
 import logging
 from kafka import KafkaProducer
-from kafka_client import get_kafka_consumer
+from kafka_client.connection import get_kafka_consumer
 from postgres_client.connection import get_pg_connection
 from postgres_client.io import load_device_metadata, insert_sensor_data
 from utils.enrichment import enrich_sensor_data

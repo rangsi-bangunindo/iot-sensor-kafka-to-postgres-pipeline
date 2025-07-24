@@ -20,5 +20,8 @@ def get_config():
 
         # Table names
         "METADATA_TABLE": os.getenv("METADATA_TABLE"),
-        "TARGET_TABLE": os.getenv("TARGET_TABLE")
+        "TARGET_TABLE": os.getenv("TARGET_TABLE"),
+
+        # Other Settings
+        "PRODUCE_INTERVAL_SECONDS": int(os.getenv("PRODUCE_INTERVAL_SECONDS", "1"))
     }

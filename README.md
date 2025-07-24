@@ -23,7 +23,8 @@ iot-sensor-kafka-to-postgres-pipeline/
 ├── kafka_client/               # Kafka-specific logic & handlers
 │   ├── __init__.py
 │   ├── connection.py
-│   └── consumer.py             # Core consumer logic (used by entry point)
+│   ├── consumer.py             # Core consumer logic (used by entry point)
+│   └── producer.py
 ├── postgres_client/            # All DB-related logic
 │   ├── __init__.py
 │   ├── connection.py           # Database connection logic
@@ -36,6 +37,7 @@ iot-sensor-kafka-to-postgres-pipeline/
 │   ├── __init__.py
 │   └── enrichment.py           # Sensor enrichment logic
 ├── config/                     # Configuration handling
+│   ├── __init__.py
 │   └── config.py               # Loads env vars from .env
 ├── db/                         # SQL schemas or migration scripts
 │   └── schema.sql
@@ -131,7 +133,7 @@ Make sure Kafka is up and topics `iot_sensor_data` and `iot_dead_letter` are cre
 Simulates and sends data:
 
 ```powershell
-python scripts/producer.py
+python -m scripts.producer
 ```
 
 ### 5. Run the Consumer
@@ -142,7 +144,7 @@ Consumes, enriches, and writes to DB:
 python -m scripts.consumer
 ```
 
-Avoid using `python scripts/consumer.py` directly to ensure module imports work correctly.
+Avoid using `python scripts/producer.py` or `python scripts/consumer.py` directly to ensure module imports work correctly.
 
 ---
 
