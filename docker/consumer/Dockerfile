@@ -10,10 +10,9 @@ COPY requirements.txt .
 # Install dependencies
 RUN pip install --no-cache-dir -r requirements.txt
 
-# Copy the rest of the application
-COPY . .
+# Mount source in dev via volumes: - .:/app
+COPY docker/consumer/entrypoint.sh /entrypoint.sh
+RUN chmod +x /entrypoint.sh
 
-ENV PYTHONPATH="/app"
-
-# Default command
-CMD ["python", "scripts/consumer.py"]
+# Set entrypoint script
+ENTRYPOINT ["/entrypoint.sh"]
