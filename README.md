@@ -42,7 +42,9 @@ iot-sensor-kafka-to-postgres-pipeline/
 ├── db/                         # SQL schemas or migration scripts
 │   └── schema.sql
 ├── docker-compose.yml          # Placeholder for future use
+├── Dockerfile
 ├── requirements.txt
+├── .dockerignore
 ├── .env
 ├── .env.example
 ├── .gitignore
