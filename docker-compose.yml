@@ -36,6 +36,26 @@ services:
     volumes:
       - pgdata:/var/lib/postgresql/data
 
+  producer:
+    build:
+      context: .
+      dockerfile: docker/producer/Dockerfile
+    depends_on:
+      - kafka
+    environment:
+      - KAFKA_BOOTSTRAP_SERVERS=kafka:29092
+      - KAFKA_TOPIC=${KAFKA_TOPIC}
+    volumes:
+      - .:/app
+    working_dir: /app
+    command: ["python", "scripts/producer.py"]
+
+    healthcheck:
+      test: ["CMD-SHELL", "ps aux | grep -v grep | grep producer.py"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+
   consumer:
     build:
       context: .

@@ -46,7 +46,8 @@ iot-sensor-kafka-to-postgres-pipeline/
 │   │   ├── Dockerfile
 │   │   └── entrypoint.sh       # For fine control
 │   └── producer/
-│       └── Dockerfile
+│       ├── Dockerfile
+│       └── entrypoint.sh
 ├── docker-compose.yml          # Placeholder for future use
 ├── requirements.txt
 ├── .dockerignore
