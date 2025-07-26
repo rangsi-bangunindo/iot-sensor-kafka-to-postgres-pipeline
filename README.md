@@ -43,15 +43,13 @@ iot-sensor-kafka-to-postgres-pipeline/
 │   └── schema.sql
 ├── docker/                     # Dockerfiles for each service
 │   ├── consumer/
-│   │   ├── Dockerfile
-│   │   └── entrypoint.sh       # For fine control
+│   │   └── Dockerfile
 │   └── producer/
-│       ├── Dockerfile
-│       └── entrypoint.sh
+│       └── Dockerfile
 ├── docker-compose.yml          # Placeholder for future use
 ├── requirements.txt
 ├── .dockerignore
-├── .env
+├── .env.production
 ├── .env.example
 ├── .gitignore
 └── README.md

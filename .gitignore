@@ -1,9 +1,10 @@
-# Python cache
 __pycache__/
-*.py[cod]
-
-# Virtual environment
-.venv/
-
-# Secrets
+*.pyc
+*.pyo
+*.pyd
+*.db
 .env
+*.sqlite3
+*.log
+*.idea/
+*.vscode/

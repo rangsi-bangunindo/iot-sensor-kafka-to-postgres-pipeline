@@ -1,18 +1,20 @@
-# Use an official Python image
+# Use an official Python image as base
 FROM python:3.10-slim
 
-# Set work directory
+# Set the working directory inside the container
 WORKDIR /app
 
-# Copy only requirement definitions first (optional optimization)
+# Set PYTHONPATH before installing dependencies
+ENV PYTHONPATH="/app"
+
+# Copy dependencies definition file
 COPY requirements.txt .
 
-# Install dependencies
+# Install Python dependencies
 RUN pip install --no-cache-dir -r requirements.txt
 
-# Mount source in dev via volumes: - .:/app
-COPY docker/producer/entrypoint.sh /entrypoint.sh
-RUN chmod +x /entrypoint.sh
+# Copy the full source code into the image
+COPY . .
 
-# Set entrypoint script
-ENTRYPOINT ["/entrypoint.sh"]
+# Set default command (can be overridden in docker-compose)
+CMD ["python", "scripts/producer.py"]
