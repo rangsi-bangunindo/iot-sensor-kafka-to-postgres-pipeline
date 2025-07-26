@@ -41,9 +41,15 @@ iot-sensor-kafka-to-postgres-pipeline/
 │   └── config.py               # Loads env vars from .env
 ├── db/                         # SQL schemas or migration scripts
 │   └── schema.sql
+├── docker/                     # Dockerfiles for each service
+│   ├── consumer/
+│   │   └── Dockerfile
+│   └── producer/
+│       └── Dockerfile
 ├── docker-compose.yml          # Placeholder for future use
 ├── requirements.txt
-├── .env
+├── .dockerignore
+├── .env.production
 ├── .env.example
 ├── .gitignore
 └── README.md
